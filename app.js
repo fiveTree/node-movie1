@@ -14,11 +14,16 @@ app.locals.moment = require('moment');
 
 //引入mongoose模块，来连接数据库
 var mongoose = require('mongoose')
+var mongoStore = require('connect-mongo')
+
 //引入字段替换模块
 var _ = require('underscore')
 
 //加载Movie模型
 var Movie = require('./models/movie')
+//加载User模型
+var User = require('./models/user')
+
 
 //设置默认端口3000，并可以从命令行传端口号参数
 var port = process.env.PORT || 3000
@@ -36,6 +41,16 @@ app.set('views', './views/pages')
 //设置试图引擎模板
 app.set('view engine', 'jade')
 
+var cookieParser = require('cookie-parser')
+var session = require('express-session')
+app.use(cookieParser())
+app.use(session({
+    secret: 'imooc',
+    resave: false,
+    saveUninitialized: true
+}))
+
+
 //格式化表单提交数据
 app.use(bodyParser.urlencoded({ extended: true }))
 
@@ -48,6 +63,7 @@ app.listen(port, () => {
 })
 // index jada
 app.get('/',(req,res)=>{
+    console.log('登录状态',req.session.user)
     Movie.fetch((err,movies)=>{
         if(err){
             console.log('index'+err)
@@ -59,6 +75,71 @@ app.get('/',(req,res)=>{
         })
     })
     
+})
+// signup
+app.post('/user/signup', (req, res) => {
+    var _user = req.body.user
+    // req.param('user)
+    console.log(_user)
+    User.findOne({ name: _user.name},(err,user)=>{
+        if (err) {
+            console.log(err)
+        }
+        if(user){
+            return res.redirect('/')
+        }else{
+            let user = new User(_user)
+            user.save((err, user) => {
+                if (err) {
+                    console.log(err)
+                }
+                console.log(user)
+                res.redirect('/admin/userList')
+            })
+        }
+    })
+    
+})
+app.post('/user/signin',(req,res)=>{
+    let {user:_user} = req.body
+    let {name,password} = _user
+    User.findOne({ name}, (err, user) => {
+        if (err) {
+            console.log(err)
+        }
+        if (!user) {
+            console.log('用户名不存在')
+            return res.redirect('/')
+        } 
+        user.comparePassword(password,(err,isMatch)=>{
+            if (err) {
+                console.log(err)
+            }
+            if (isMatch){
+                console.log('登录成功')
+                req.session.user = user
+                return res.redirect('/') 
+            }else{
+                console.log('密码错误')
+                return 
+            }
+        })
+    })
+
+})
+// userList jada
+app.get('/admin/userList', (req, res) => {
+    User.fetch((err, users) => {
+        if (err) {
+            console.log(err)
+        }
+
+        res.render('userList', {
+            title: "imooc 用户列表项",
+            users
+        })
+    })
+
 })
 
 
@@ -75,7 +156,7 @@ app.get('/movie/:id', (req, res) => {
 })
 
 // admin jada
-app.get('/admin/movie', (req, res) => {
+app.get('/admin/new', (req, res) => {
     res.render('admin', {
         title: "公司 后台录入页",
         movie: {
