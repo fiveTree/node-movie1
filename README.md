@@ -9,4 +9,5 @@ bower i
   http://www.runoob.com/mongodb/mongodb-tutorial.html
 
 #运行
-node app.js
+<!-- node app.js -->
+grunt
