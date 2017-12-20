@@ -1,6 +1,12 @@
 var mongoose = require("mongoose")
+var Schema = mongoose.Schema
+var { ObjectId } = Schema.Types
 
-var MovieSchema = new mongoose.Schema({
+var MovieSchema = new Schema({
+    category: {
+        type: ObjectId,
+        ref: 'Category'
+    },
     doctor: String,
     title: String,
     language: String,

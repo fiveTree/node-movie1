@@ -90,6 +90,7 @@ exports.list = (req, res) => {
 
 // userList jada
 exports.signinRequired = (req, res, next) => {
+    console.log(111)
     let {user} = req.session
     if (!user){
         return res.redirect('/signin')

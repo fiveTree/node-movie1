@@ -1,6 +1,8 @@
 //加载Movie模型
 var Movie = require('../models/movie')
 var Comment = require('../models/comment')
+var Category = require('../models/category')
+
 //引入字段替换模块
 var _ = require('underscore')
 
@@ -31,19 +33,17 @@ exports.detail = (req, res) => {
 }
 // admin new jada
 exports.new = (req, res) => {
-    res.render('admin', {
-        title: "公司 后台录入页",
-        movie: {
-            doctor: "",
-            country: '',
-            title: "",
-            year: '',
-            poster: "",
-            language: "",
-            flash: "",
-            summary: '',
+    Category.find({},(err, categories) => {
+        if (err) {
+            console.log(err)
         }
+        res.render('admin', {
+            title: "公司 后台录入页",
+            movie: {},
+            categories
+        })
     })
+    
 }
 
 
@@ -53,14 +53,18 @@ exports.update = (req, res) => {
     console.log('id=' + id)
     if (id) {
         Movie.findById(id, (err, movie) => {
-            if (err) {
-                console.log(err)
-            }
-            console.log('movie=' + movie)
-            res.render('admin', {
-                title: "公司 后台更新页",
-                movie: movie
+            Category.find({}, (err, categories) => {
+                if (err) {
+                    console.log(err)
+                }
+                console.log('movie=' + movie)
+                res.render('admin', {
+                    title: "公司 后台更新页",
+                    movie,
+                    categories
+                })
             })
+            
         })
     }
 }
@@ -71,7 +75,7 @@ exports.save =  (req, res) => {
     var movieObj = req.body.movie
     console.log('开始')
     var _movie
-    if (id !== 'undefined') {
+    if (id) {
         console.log("0 ：id !== 'undefined'")
         Movie.findById(id, (err, movie) => {
             if (err) {
@@ -88,23 +92,41 @@ exports.save =  (req, res) => {
         })
     } else {
         console.log("1：id == 'undefined'")
-        _movie = new Movie({
-            doctor: movieObj.doctor,
-            title: movieObj.title,
-            language: movieObj.language,
-            country: movieObj.country,
-            summary: movieObj.summary,
-            flash: movieObj.flash,
-            poster: movieObj.poster,
-            year: movieObj.year,
-        })
+        _movie = new Movie(movieObj)
         console.log(2, movieObj)
+        var { categoryId, categoryName } = movieObj
+
         _movie.save((err, movie) => {
-            console.log(3, err)
+            console.log(3, categoryId)
             if (err) {
                 console.log(err)
             }
-            res.redirect('/movie/' + movie._id)
+            if (categoryId){
+                Category.findById(categoryId, (err, category) => {
+                    if (err) {
+                        console.log(err)
+                    }
+                    category.movies.push(_movie.id)
+                    category.save((err, category) => {
+                        res.redirect('/movie/' + movie._id)
+                    })
+                })
+            } else if (categoryName){
+                var category = new Category({
+                    name: categoryName,
+                    movies: [_movie.id]
+                })
+                category.save((err, category) => {
+                    movie.category = category._id
+                    movie.save((err, movie) => {
+                        if (err) {
+                            console.log(err)
+                        }
+                        res.redirect('/movie/' + movie._id)
+                    })
+                })
+            }
+            
         })
     }
 
